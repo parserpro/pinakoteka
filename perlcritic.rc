@@ -1,0 +1,31 @@
+severity = 4
+
+[TestingAndDebugging::RequireUseWarnings]
+equivalent_modules = common::sense
+
+[TestingAndDebugging::RequireUseStrict]
+equivalent_modules = common::sense
+
+[RegularExpressions::RequireExtendedFormatting]
+severity = 2
+
+[RegularExpressions::ProhibitComplexRegexes]
+severity = 2
+
+[Variables::ProhibitReusedNames]
+severity = 2
+
+[Variables::ProhibitUnusedVariables]
+severity = 5
+
+#[ControlStructures::ProhibitCascadingIfElse]
+#severity = 5
+
+#[Subroutines::ProhibitExcessComplexity]
+#severity = 5
+
+[Subroutines::RequireFinalReturn]
+severity = 5
+
+[Subroutines::RequireArgUnpacking]
+severity = 5

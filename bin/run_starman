@@ -1,0 +1,7 @@
+if [ -z "$PINA_WORKERS" ] || [ -z "$PINA_PORT" ] || [ -z "$PINA_HOME" ]
+then
+echo "Variables are empty"
+else
+plackup --env production --server Starman --workers=$PINA_WORKERS --max-requests=100 --port $PINA_PORT --host 127.0.0.1 --pid ~/www/pinakoteka/pina.pid --app ~/www/pinakoteka/script/pinakoteka &
+# --host 127.0.0.1
+fi

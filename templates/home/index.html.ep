@@ -1,0 +1,10 @@
+<div class="main_block clearfix">
+  <div class="left_block">
+    test pina
+  </div>
+  %= form_for save => (enctype => 'multipart/form-data') => begin
+  %= file_field 'file'
+  %= submit_button 'Upload'
+  % end
+</div>
+

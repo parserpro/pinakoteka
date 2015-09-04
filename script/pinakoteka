@@ -1,10 +1,102 @@
 #!/usr/bin/env perl
-
-use strict;
+use 5.10.0;
+use common::sense;
 use warnings;
+use utf8;
+use Mojo::Home;
+use Devel::StackTrace;
+use Data::Dumper;
+use Encode;
 
-use lib 'lib';
+$|++;
 
-# Start command line interface for application
+my $rel_dir;
+
+my $start_time;
+
+my %errors;
+
+BEGIN {
+    no warnings 'redefine';
+    $start_time = time;
+
+    $ENV{MOJO_HOME} = $ENV{PINA_HOME} if exists $ENV{PINA_HOME};
+
+    # переопределение Data::Dumper, чтобы отображались русские символы
+    $Data::Dumper::Useqq = 1;
+
+    sub Data::Dumper::qquote {
+        my $s = shift;
+        return "'$s'";
+    }
+
+    # определение домашней директории
+    my $home = Mojo::Home->new;
+    $home->detect;
+    $rel_dir = $home->to_string;
+
+    open( my $WARN, '>>', $home->rel_file('log/pina.log') );
+    my $old_fh = select $WARN;
+    $|++;
+    select $old_fh;
+    print $WARN localtime . " =================== πινακοθήκη RESTART=======================\n";
+
+    # перехват всех необработанных ворнингов
+    $SIG{__WARN__} = sub {
+        my $message = shift;
+        chomp $message;
+
+        # возвращаем FALSE для подавления дальнейшего вывода ошибок
+        return unless $message;
+
+        # отрезаем указание на место ошибки т.к. выведем это красивее
+        $message =~ s/ at \/home.+$//;
+
+        my @c = caller(0);
+        my @lt = localtime;
+        my $warn = $lt[5] + 1900 . '.' .
+           sprintf('%02d', $lt[4] + 1) . '.' .
+           sprintf('%02d', $lt[3] + 0) . ' ' .
+           sprintf('%02d', $lt[2] + 0) . ':' .
+           sprintf('%02d', $lt[1] + 0) . ':' .
+           sprintf('%02d', $lt[0] + 0) . ' - ' .
+           "[$c[0]][$c[2]] $message\n";
+        print $WARN $warn;
+
+        # убираем подробности там где они не нужны
+#        return if $message =~ /Use of uninitialized value/;
+
+        if ( exists $INC{'Profile.pm'} && Profile->id ) {
+            print $WARN ". User ID: " . Profile->id . ' : User: ' . Profile->login . "\n";
+        }
+        else {
+            print $WARN ".  Anonim\n";
+        }
+
+#        if ( $mojo ) {
+#            print $WARN ". Request data:\n" . join("\n", map { '.  ' . $_ . ' : ' . ( $mojo->req->env->{$_} ? $mojo->req->env->{$_} : '') } ('REQUEST_URI', 'REQUEST_METHOD', 'HTTP_REFERER', 'HTTP_ACCEPT_ENCODING', 'HTTP_HOST', 'HTTP_X_FORWARDED_HOST', 'HTTP_ACCEPT_LANGUAGE', 'HTTP_USER_AGENT', 'HTTP_ACCEPT', 'HTTP_COOKIE', 'psgi.url_scheme', 'HTTP_X_FORWARDED_FOR', 'SERVER_PORT', 'PATH_INFO', 'QUERY_STRING', 'HTTP_X_REAL_IP')) . "\n";
+#        }
+
+        print $WARN "-----<<<\n" . encode('utf8', Devel::StackTrace->new->as_string) . "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+    };
+
+    # перехват всех необработанных исключений
+    local $SIG{__DIE__} = $SIG{__WARN__};
+
+    # настройка профайлера
+    my $file = $home->rel_file($rel_dir . '/log/nyt.tmp');
+    $ENV{NYTPROF} = "start=no:file=$file";
+    require Devel::NYTProf;
+    DB::finish_profile();
+    unlink $file;
+}
+
+use lib "$rel_dir/lib";
+
+# запуск приложения
 require Mojolicious::Commands;
+
+$ENV{MOJO_LOG_LEVEL} = 'debug';
+
 Mojolicious::Commands->start_app('Pinakoteka');
+
